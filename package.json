@@ -1,8 +1,10 @@
 {
+	"publisher": "oshri22",
 	"name": "cpp-generate-getters-and-setters",
 	"displayName": "cpp-generate-getters-and-setters",
 	"description": "generate a cpp file with getters and setters for the private vars",
-	"version": "0.0.1",
+	"repository": "https://github.com/oshri22/getters-setters-generate",
+	"version": "1.1.0",
 	"engines": {
 		"vscode": "^1.51.0"
 	},
