@@ -7,9 +7,11 @@ export function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand(
     "cpp-generate-getters-and-setters.generate-getters-setters",() => {
       const dir = vscode.workspace.rootPath;
+
       if (!dir) {
         return vscode.window.showErrorMessage("No folder open in editor");
       }
+
       const notify = main(dir);
       return vscode.window.showInformationMessage(notify);
     }
