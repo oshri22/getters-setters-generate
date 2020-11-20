@@ -10,7 +10,6 @@ function generateConstructor(data: Array<ClassValues>): string {
   let content = "";
   let amount = 0;
   let currClass = data[0].className;
-  let currClassIndex = 0;
 
   data.forEach((val) => {
     if (currClass !== val.className){
@@ -25,7 +24,8 @@ function generateConstructor(data: Array<ClassValues>): string {
       currClass = val.className;
       constructor += `${val.className}::${val.className}(`;
     }
-    if(val.valueType.endsWith("*")){
+    if(val.valueType.endsWith("*") || val.valueName.startsWith("*"))
+    {
       content += `
 \tthis->${val.valueName} = new ${val.valueType.replace("*","").replace("&","")}[size${amount >0?amount:0}];
 \tif(this->${val.valueName}==nullptr){
@@ -48,9 +48,9 @@ function generateConstructor(data: Array<ClassValues>): string {
       constructor += ` int size${amount >0?amount:0},`;
       amount ++;
     }
-    else if (val.valueType.endsWith("&")){
+    else if (val.valueType.endsWith("&") || val.valueName.startsWith("&")){
       constructor += ` ${val.valueType} ${val.valueName},`;
-      content += `\tthis->${val.valueName} = ${val.valueName};\n`
+      content += `\tthis->${val.valueName} = ${val.valueName};\n`;
     }
     else if(["int","float","long","double"].includes(val.valueType) || val.valueType.startsWith("unsigned")){
       content += `\tthis->${val.valueName} = 0;\n`;
@@ -82,9 +82,7 @@ function generateConstructor(data: Array<ClassValues>): string {
 function generateCopyConstructor(data: Array<ClassValues>): string {
   let constructor = `${data[0].className}::${data[0].className}(const ${data[0].className} copyFrom){`;
   let content = "";
-  let amount = 0;
   let currClass = data[0].className;
-  let currClassIndex = 0;
 
   data.forEach((val) => {
     //console.log(`${currClass} ${val.className} ${currClass !== val.className}`);
@@ -99,7 +97,7 @@ function generateCopyConstructor(data: Array<ClassValues>): string {
       currClass = val.className;
       constructor += `${val.className}::${val.className}(const ${val.className} copyFrom){`;
     }
-    if(val.valueType.endsWith("*")){
+    if(val.valueType.endsWith("*") || val.valueName.startsWith("*")){
       content += `
 \tint length = sizeof(copyFrom.${val.valueName}) / sizeof(${val.valueType.replace("*","")});
 \tthis->${val.valueName} = new int[length];
@@ -117,7 +115,7 @@ function generateCopyConstructor(data: Array<ClassValues>): string {
 \t\tthis->${valueName}[i] = copyFrom.${valueName}[i];
 \t}\n`;
     }
-    else if (val.valueType.endsWith("&")){
+    else if (val.valueType.endsWith("&") || val.valueName.startsWith("&")){
       content += `\tthis->${val.valueName} = copyFrom.${val.valueName};\n`;
     }
     else if(["int","float","long","double"].includes(val.valueType) || val.valueType.startsWith("unsigned")){
@@ -167,7 +165,7 @@ function generateDestructor(data: Array<ClassValues>): string {
       currClass = val.className;
       constructor += `${val.className}::~${val.className}(){`;
     }
-    if(val.valueType.endsWith("*")){
+    if(val.valueType.endsWith("*") || val.valueName.startsWith("*")){
       content += `
 \tif(this->${val.valueName} != nullptr){
 \t\tdelete [] this->${val.valueName};
@@ -191,6 +189,70 @@ function generateDestructor(data: Array<ClassValues>): string {
 \t${content}
 }
 \n`;
+
+  return constructor;
+}
+
+
+/**
+ * @param data the array of variables to use
+ * function to generate copy constructor for the class
+ * output: the string of the copy constructor  function
+*/
+function generateMoveConstructor(data: Array<ClassValues>): string {
+  let constructor = `${data[0].className}::${data[0].className}(${data[0].className}&& moveFrom){`;
+  let content = "";
+  let currClass = data[0].className;
+
+  data.forEach((val) => {
+    //console.log(`${currClass} ${val.className} ${currClass !== val.className}`);
+    if (currClass !== val.className){
+      if (constructor.substr(constructor.length-1,1) === ","){
+        constructor = constructor.slice(0,constructor.length-1);
+      }
+      constructor += `
+\t${content}
+}\n\n`;
+      content = "";
+      currClass = val.className;
+      constructor += `${val.className}::${val.className}(${val.className}&& moveFrom){`;
+    }
+    if(val.valueType.endsWith("*") || val.valueName.startsWith("*")){
+      content += `
+\tif(this->${val.valueName} != nullptr){
+\t\tthis->${val.valueName} = moveFrom.${val.valueName};
+\t\tmoveFrom.${val.valueName} = nullptr;
+\t}\n`;
+      
+    }
+    else if(val.valueName.endsWith("[]")){
+      let valueName = val.valueName.replace("[]","");
+      content += `
+\tif(this->${valueName} != nullptr){
+\t\tthis->${valueName} = moveFrom.${valueName};
+\t\tmoveFrom.${valueName} = nullptr;
+\t}\n`;
+    }
+    else if (val.valueType.endsWith("&") || val.valueName.startsWith("&")){
+      content += `\tthis->${val.valueName} = moveFrom.${val.valueName};\n`;
+    }
+    else if(["int","float","long","double"].includes(val.valueType) || val.valueType.startsWith("unsigned")){
+      content += `\tthis->${val.valueName} = moveFrom.${val.valueName};\n`;
+    }
+    else if(val.valueType === "string"){
+      content += `\tthis->${val.valueName} = moveFrom.${val.valueName};\n`;
+    }
+    else if(val.valueType === "char"){
+      content += `\tthis->${val.valueName} = moveFrom.${val.valueName};\n`;
+    }
+  });
+  /////try to find the content and add the function to pack it
+  if (constructor.substr(constructor.length-1,1) === ","){
+    constructor = constructor.slice(0,constructor.length-1);
+  } 
+  constructor += `
+\t${content}
+}\n\n`;
 
   return constructor;
 }
@@ -231,6 +293,7 @@ export default function generateText(data: Array<ClassValues>): string {
   let dataToWrite = "";
   dataToWrite += generateConstructor(data);
   dataToWrite += generateCopyConstructor(data);
+  dataToWrite += generateMoveConstructor(data);
   dataToWrite += generateDestructor(data);
   //console.log(dataToWrite);
   data.forEach((val) => {
