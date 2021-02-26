@@ -99,7 +99,7 @@ function generateCopyConstructor(data: Array<ClassValues>): string {
     }
     if(val.valueType.endsWith("*") || val.valueName.startsWith("*")){
       content += `
-\tint length = sizeof(copyFrom.${val.valueName}) / sizeof(${val.valueType.replace("*","")});
+\tint length = sizeof(copyFrom.${val.valueName}) / sizeof(${val.valueType.replace("*","")}[0]);
 \tthis->${val.valueName} = new int[length];
 \tfor(unsigned int i {};i<length;i++){
 \t\tthis->${val.valueName}[i] = copyFrom.${val.valueName}[i];
@@ -276,12 +276,12 @@ ${data.valueType} ${data.className}::get_${data.valueName}() const{
  * output: the string of the function
 */
 function generateSet(data: ClassValues): string {
-  return `
+  return !data.valueType.includes("const") ?`
 void ${data.className}::set_${data.valueName}(${data.valueType
     .split(" ")
     .join("  ")} ${data.valueName}){
   this->${data.valueName} = ${data.valueName};
-}\n`;
+}\n` : "";
 }
 
 /**

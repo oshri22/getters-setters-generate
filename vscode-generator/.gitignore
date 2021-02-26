@@ -4,3 +4,4 @@ node_modules
 *.vsix
 ./vsc-extension-quickstart.md
 ./ideas.md
+./src/test
